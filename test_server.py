@@ -69,8 +69,43 @@ def test_chat_endpoint():
         
         if response.status_code == 200:
             result = response.json()
-            print("Response:")
-            print(json.dumps(result, indent=2))
+            
+            # Display the response content
+            print("Response Content:")
+            print("-" * 40)
+            print(result.get("response", "No response content"))
+            print()
+            
+            # Display metrics in a readable format
+            metrics = result.get("metrics", {})
+            if metrics:
+                print("Metrics:")
+                print("-" * 40)
+                print(f"Total Cycles: {metrics.get('total_cycles', 0)}")
+                print(f"Total Duration: {metrics.get('total_duration', 0.0):.2f}s")
+                print(f"Average Cycle Time: {metrics.get('average_cycle_time', 0.0):.2f}s")
+                
+                # Display token usage
+                accumulated_usage = metrics.get('accumulated_usage', {})
+                if accumulated_usage:
+                    print(f"Input Tokens: {accumulated_usage.get('inputTokens', 0)}")
+                    print(f"Output Tokens: {accumulated_usage.get('outputTokens', 0)}")
+                    print(f"Total Tokens: {accumulated_usage.get('totalTokens', 0)}")
+                
+                # Display latency
+                accumulated_metrics = metrics.get('accumulated_metrics', {})
+                if accumulated_metrics:
+                    print(f"Latency: {accumulated_metrics.get('latencyMs', 0)}ms")
+                
+                # Display tool usage
+                tool_usage = metrics.get('tool_usage', {})
+                if tool_usage:
+                    print("Tool Usage:")
+                    for tool_name, tool_data in tool_usage.items():
+                        execution_stats = tool_data.get('execution_stats', {})
+                        print(f"  {tool_name}: {execution_stats}")
+            else:
+                print("No metrics available")
         else:
             print(f"Error: {response.text}")
             

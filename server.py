@@ -62,28 +62,27 @@ async def stream_response(request: PromptRequest):
     )
 
 @app.post("/chat")
-async def chat_response(request: PromptRequest):
+def chat_response(request: PromptRequest):
     """Get a complete response from MockAgent (non-streaming)."""
     try:
         agent = get_agent_instance(request.use_bedrock)
         
-        # Run agent query in thread pool to avoid blocking
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None,
-            agent.query if hasattr(agent, 'query') else agent.agent,
-            request.prompt
-        )
+        # Direct synchronous call to agent query
+        response = agent.query(request.prompt)
         
         # Extract content from response
         if hasattr(response, 'message') and 'content' in response.message:
             content = response.message['content']
         else:
             content = str(response)
+        
+        # Get condensed metrics
+        metrics = agent.condense_metrics(response.metrics.get_summary())
             
         return {
             "response": content,
-            "model": "bedrock" if request.use_bedrock else "openai"
+            "model": "bedrock" if request.use_bedrock else "openai",
+            "metrics": metrics
         }
         
     except Exception as e:

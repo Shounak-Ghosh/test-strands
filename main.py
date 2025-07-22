@@ -140,10 +140,79 @@ class MockAgent:
         response = self._capture_output(self.agent, message)
         print("\nAGENT MESSAGE CONTENT\n", response.message['content'])
         return response
+
+    def condense_metrics(self, metrics_summary):
+        """
+        Condense the response metrics into a summary.
+        
+        Args:
+            metrics_summary: The metrics summary from response.metrics.get_summary()
+            
+        Returns:
+            A condensed JSON object with metrics, excluding traces and tool info
+        """
+        
+        # Initialize the condensed metrics structure
+        condensed_metrics = {
+            "total_cycles": 0,
+            "total_duration": 0.0,
+            "average_cycle_time": 0.0,
+            "tool_usage": {},
+            "accumulated_usage": {},
+            "accumulated_metrics": {}
+        }
+        
+        try:
+            # Extract basic metrics from dictionary
+            condensed_metrics["total_cycles"] = metrics_summary.get("total_cycles", 0)
+            condensed_metrics["total_duration"] = metrics_summary.get("total_duration", 0.0)
+            
+            # Calculate average cycle time
+            if condensed_metrics["total_cycles"] > 0:
+                condensed_metrics["average_cycle_time"] = condensed_metrics["total_duration"] / condensed_metrics["total_cycles"]
+            
+            # Process tool usage - only include execution_stats
+            tool_usage = metrics_summary.get("tool_usage", {})
+            for tool_name, tool_data in tool_usage.items():
+                if isinstance(tool_data, dict) and "execution_stats" in tool_data:
+                    condensed_metrics["tool_usage"][tool_name] = {
+                        "execution_stats": tool_data["execution_stats"]
+                    }
+            
+            # Process accumulated usage
+            accumulated_usage = metrics_summary.get("accumulated_usage", {})
+            condensed_metrics["accumulated_usage"] = {
+                "inputTokens": accumulated_usage.get("inputTokens", 0),
+                "outputTokens": accumulated_usage.get("outputTokens", 0),
+                "totalTokens": accumulated_usage.get("totalTokens", 0)
+            }
+            
+            # Process accumulated metrics
+            accumulated_metrics = metrics_summary.get("accumulated_metrics", {})
+            condensed_metrics["accumulated_metrics"] = {
+                "latencyMs": accumulated_metrics.get("latencyMs", 0)
+            }
+                
+        except Exception as e:
+            print(f"❌ Error condensing metrics: {e}")
+            print(f"❌ Metrics summary type: {type(metrics_summary)}")
+            print(f"❌ Metrics summary content: {metrics_summary}")
+            # Return a minimal structure if there's an error
+            return {
+                "total_cycles": 0,
+                "total_duration": 0.0,
+                "average_cycle_time": 0.0,
+                "tool_usage": {},
+                "accumulated_usage": {},
+                "accumulated_metrics": {}
+            }
+        
+        return condensed_metrics
     
     def query(self, message: str):
         """Send a custom query to the agent."""
         response = self._capture_output(self.agent, message)
+        # print(self.condense_metrics(response.metrics.get_summary()))
         return response
     
     async def query_async(self, message: str):

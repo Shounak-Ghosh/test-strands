@@ -33,15 +33,82 @@ def test_streaming_endpoint():
         if response.status_code == 200:
             print("Streaming response:")
             # Stream the response chunk by chunk
+            response_text = ""
+            metrics_json = ""
+            in_metrics_section = False
+            
             for chunk in response.iter_content(chunk_size=1024, decode_unicode=True):
                 if chunk:
-                    print(chunk, end='', flush=True)
+                    # Check if we're entering the metrics section
+                    if "---METRICS_START---" in chunk:
+                        in_metrics_section = True
+                        # Print the response content that came before metrics
+                        print(response_text)
+                        print("\n" + "="*50)
+                        print("METRICS:")
+                        print("="*50)
+                        # Extract the metrics JSON from this chunk
+                        metrics_start = chunk.find("---METRICS_START---")
+                        if metrics_start != -1:
+                            metrics_json = chunk[metrics_start + len("---METRICS_START---\n"):]
+                        continue
+                    
+                    # Check if we're exiting the metrics section
+                    if "---METRICS_END---" in chunk:
+                        in_metrics_section = False
+                        # Extract the metrics JSON from this chunk
+                        metrics_end = chunk.find("---METRICS_END---")
+                        if metrics_end != -1:
+                            metrics_json += chunk[:metrics_end]
+                        # Parse and display metrics
+                        try:
+                            metrics = json.loads(metrics_json)
+                            print_metrics(metrics)
+                        except json.JSONDecodeError as e:
+                            print(f"Error parsing metrics: {e}")
+                            print(f"Raw metrics: {metrics_json}")
+                        continue
+                    
+                    # If we're in metrics section, collect the JSON
+                    if in_metrics_section:
+                        metrics_json += chunk
+                    else:
+                        # Regular response text
+                        response_text += chunk
+                        print(chunk, end='', flush=True)
+            
             print("\n--- End of stream ---\n")
         else:
             print(f"Error: {response.text}")
             
     except Exception as e:
         print(f"Error during streaming test: {e}")
+
+def print_metrics(metrics):
+    """Print metrics in a readable format."""
+    print(f"Total Cycles: {metrics.get('total_cycles', 0)}")
+    print(f"Total Duration: {metrics.get('total_duration', 0.0):.2f}s")
+    print(f"Average Cycle Time: {metrics.get('average_cycle_time', 0.0):.2f}s")
+    
+    # Display token usage
+    accumulated_usage = metrics.get('accumulated_usage', {})
+    if accumulated_usage:
+        print(f"Input Tokens: {accumulated_usage.get('inputTokens', 0)}")
+        print(f"Output Tokens: {accumulated_usage.get('outputTokens', 0)}")
+        print(f"Total Tokens: {accumulated_usage.get('totalTokens', 0)}")
+    
+    # Display latency
+    accumulated_metrics = metrics.get('accumulated_metrics', {})
+    if accumulated_metrics:
+        print(f"Latency: {accumulated_metrics.get('latencyMs', 0)}ms")
+    
+    # Display tool usage
+    tool_usage = metrics.get('tool_usage', {})
+    if tool_usage:
+        print("Tool Usage:")
+        for tool_name, tool_data in tool_usage.items():
+            execution_stats = tool_data.get('execution_stats', {})
+            print(f"  {tool_name}: {execution_stats}")
 
 def test_chat_endpoint():
     """Test the chat endpoint."""

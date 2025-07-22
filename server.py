@@ -48,11 +48,28 @@ async def stream_response(request: PromptRequest):
         agent = get_agent_instance(request.use_bedrock)
         
         try:
-            # Use the MockAgent's stream_async method which includes output capture
+            # Collect all events to get metrics at the end
+            events = []
+            final_result = None
+            
             async for event in agent.stream_async(request.prompt):
+                events.append(event)
                 if "data" in event:
-                    # Only stream text chunks to the client
+                    # Stream text chunks to the client
                     yield event["data"]
+                
+                # Check if this is a result event (final event with metrics)
+                if "result" in event:
+                    final_result = event["result"]
+            
+            # After streaming is complete, send metrics as a special marker
+            if final_result and hasattr(final_result, 'metrics'):
+                metrics = agent.condense_metrics(final_result.metrics.get_summary())
+                # Send a special marker followed by metrics JSON
+                yield "\n\n---METRICS_START---\n"
+                yield json.dumps(metrics)
+                yield "\n---METRICS_END---\n"
+                    
         except Exception as e:
             yield f"Error: {str(e)}"
 

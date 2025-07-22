@@ -10,7 +10,13 @@ def test_streaming_endpoint():
     print("Testing streaming endpoint...")
     
     payload = {
-        "prompt": "What is the current time and what is 15 * 23?",
+        "prompt": """
+                    I have 3 requests:
+
+                    1. What is the time right now?
+                    2. Calculate 3111696 / 74088
+                    3. Tell me how many letter R's in the word "strawberry" 🍓
+                    """,
         "use_bedrock": False
     }
     
@@ -42,7 +48,13 @@ def test_chat_endpoint():
     print("Testing chat endpoint...")
     
     payload = {
-        "prompt": "Count the letter 'r' in the word 'strawberry'",
+        "prompt": """
+                    I have 3 requests:
+
+                    1. What is the time right now?
+                    2. Calculate 3111696 / 74088
+                    3. Tell me how many letter R's in the word "strawberry" 🍓
+                    """,
         "use_bedrock": False
     }
     
@@ -104,11 +116,11 @@ def main():
     print("=" * 40)
     
     try:
-        test_health_endpoint()
-        print()
+        # test_health_endpoint()
+        # print()
         
-        test_root_endpoint()
-        print()
+        # test_root_endpoint()
+        # print()
         
         test_chat_endpoint()
         print()

@@ -44,37 +44,21 @@ def get_agent_instance(use_bedrock: bool = False) -> MockAgent:
 @app.post("/stream")
 async def stream_response(request: PromptRequest):
     """Stream response from MockAgent using native Strands streaming."""
-    async def generate() -> AsyncGenerator[str, None]:
+    async def generate():
+        agent = get_agent_instance(request.use_bedrock)
+        
         try:
-            agent = get_agent_instance(request.use_bedrock)
-            
-            # Use the native stream_async method from Strands Agent
-            async for event in agent.agent.stream_async(request.prompt):
-                # Stream the entire event as JSON for debugging
-                # You can modify this to extract specific parts of the event
-                if isinstance(event, dict):
-                    # If event contains specific data fields, extract them
-                    if "content" in event:
-                        yield event["content"]
-                    elif "data" in event:
-                        yield event["data"]
-                    elif "text" in event:
-                        yield event["text"]
-                    else:
-                        # Stream the entire event for debugging
-                        yield json.dumps(event) + "\n"
-                else:
-                    # Stream string events directly
-                    yield str(event)
-                    
+            # Use the MockAgent's stream_async method which includes output capture
+            async for event in agent.stream_async(request.prompt):
+                if "data" in event:
+                    # Only stream text chunks to the client
+                    yield event["data"]
         except Exception as e:
-            logging.error(f"Error in stream_response: {str(e)}")
             yield f"Error: {str(e)}"
 
     return StreamingResponse(
         generate(),
-        media_type="text/plain",
-        headers={"Cache-Control": "no-cache"}
+        media_type="text/plain"
     )
 
 @app.post("/chat")

@@ -48,15 +48,17 @@ class MockAgent:
     
     def _configure_logging(self):
         """Configure logging to suppress verbose output."""
+        # Set specific loggers to CRITICAL to suppress agent-related output
         logging.getLogger("strands").setLevel(logging.CRITICAL)
-        logging.getLogger("openai").setLevel(logging.WARNING)
-        logging.getLogger("httpx").setLevel(logging.WARNING)
-
-        logging.basicConfig(
-            level=logging.CRITICAL,
-            format="%(levelname)s | %(name)s | %(message)s",
-            handlers=[logging.StreamHandler()]
-        )
+        logging.getLogger("openai").setLevel(logging.CRITICAL)
+        logging.getLogger("httpx").setLevel(logging.CRITICAL)
+        logging.getLogger("anthropic").setLevel(logging.CRITICAL)
+        logging.getLogger("boto3").setLevel(logging.CRITICAL)
+        logging.getLogger("botocore").setLevel(logging.CRITICAL)
+        logging.getLogger("urllib3").setLevel(logging.CRITICAL)
+        
+        # Don't disable all logging - just target specific loggers
+        # This allows server logs to still work
     
     def _setup_models(self):
         """Set up the Bedrock and OpenAI models."""
@@ -100,12 +102,30 @@ class MockAgent:
 
         try:
             result = func(*args, **kwargs)
-            print(result.metrics.get_summary())
+            # print(result.metrics.get_summary())
         finally:
             sys.stdout = original_stdout
             sys.stderr = original_stderr
 
         return result
+    
+    async def _capture_output_async(self, async_gen):
+        """Capture and suppress stdout/stderr during async generator execution."""
+        original_stdout = sys.stdout
+        original_stderr = sys.stderr
+        captured_output = StringIO()
+
+        # Redirect both stdout and stderr to the StringIO buffer
+        sys.stdout = captured_output
+        sys.stderr = captured_output
+
+        try:
+            async for event in async_gen:
+                yield event
+        finally:
+            # Restore original stdout and stderr
+            sys.stdout = original_stdout
+            sys.stderr = original_stderr
     
     def run_test_scenario(self):
         """Run the test scenario with multiple requests."""
@@ -139,8 +159,8 @@ class MockAgent:
     
     async def stream_async(self, message: str):
         """Stream agent responses asynchronously using built-in stream_async."""
-        # Use the built-in stream_async method from Strands Agent
-        async for event in self.agent.stream_async(message):
+        # Use the built-in stream_async method from Strands Agent with output capture
+        async for event in self._capture_output_async(self.agent.stream_async(message)):
             yield event
     
     async def demo_streaming(self, message: str = None):

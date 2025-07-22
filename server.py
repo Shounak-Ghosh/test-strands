@@ -55,27 +55,30 @@ async def stream_response(request: PromptRequest):
             async for event in agent.stream_async(request.prompt):
                 events.append(event)
                 if "data" in event:
-                    # Stream text chunks to the client
-                    yield event["data"]
+                    # Stream text chunks to the client as SSE data events
+                    yield f"data: {event['data']}\n\n"
                 
                 # Check if this is a result event (final event with metrics)
                 if "result" in event:
                     final_result = event["result"]
             
-            # After streaming is complete, send metrics as a special marker
+            # After streaming is complete, send metrics as a separate SSE event
             if final_result and hasattr(final_result, 'metrics'):
                 metrics = agent.condense_metrics(final_result.metrics.get_summary())
-                # Send a special marker followed by metrics JSON
-                yield "\n\n---METRICS_START---\n"
-                yield json.dumps(metrics)
-                yield "\n---METRICS_END---\n"
+                # Send metrics as a separate SSE event
+                yield f"event: metrics\ndata: {json.dumps(metrics)}\n\n"
                     
         except Exception as e:
             yield f"Error: {str(e)}"
 
     return StreamingResponse(
         generate(),
-        media_type="text/plain"
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Type": "text/event-stream"
+        }
     )
 
 @app.post("/chat")

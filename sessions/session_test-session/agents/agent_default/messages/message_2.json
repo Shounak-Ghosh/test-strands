@@ -1,0 +1,14 @@
+{
+  "message": {
+    "role": "user",
+    "content": [
+      {
+        "text": "What is 2 + 2"
+      }
+    ]
+  },
+  "message_id": 2,
+  "redact_message": null,
+  "created_at": "2025-07-17T17:09:34.850081+00:00",
+  "updated_at": "2025-07-17T17:09:34.850084+00:00"
+}

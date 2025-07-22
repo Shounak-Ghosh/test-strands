@@ -1,0 +1,14 @@
+{
+  "message": {
+    "role": "assistant",
+    "content": [
+      {
+        "text": "2 + 2 = 4"
+      }
+    ]
+  },
+  "message_id": 3,
+  "redact_message": null,
+  "created_at": "2025-07-17T17:09:35.949069+00:00",
+  "updated_at": "2025-07-17T17:09:35.949079+00:00"
+}
